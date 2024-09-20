@@ -47,7 +47,18 @@ class LoadFile(object):
 
         self.stoplist = None
         """List of stopwords."""
+            
+        self.user_feedback_dict = None
+        """User feedback dictionary"""
+    
+    def load_user_feedback(self, feedback_dict):
+        """Loads the dictionary of user feedback.
 
+        Args:
+            feedback_dict: the dictionary keyword (string):value (float).
+        """
+        self.user_feedback_dict = feedback_dict
+        
     def load_document(self, input, language=None, stoplist=None,
                       normalization='stemming', spacy_model=None):
         """Loads the content of a document/string/stream in a given language.
@@ -156,6 +167,25 @@ class LoadFile(object):
                     return True
         return False
 
+    def update_weights_with_stemming(self, user_dict, weights, bigger_is_good=True):
+        stemmer = SnowballStemmer("english")
+        
+        #print(f"weights = ", weights)   
+        if user_dict:
+            stemmed_user_dict = {stemmer.stem(key): value for key, value in user_dict.items()}
+            for key, value in weights.items():
+                stemmed_key = stemmer.stem(key)
+                if stemmed_key in stemmed_user_dict:
+                    old_weight = value
+                    feed_back = stemmed_user_dict[stemmed_key]
+                    if bigger_is_good:
+                        weights[key] *= feed_back  # Multiply the weight if the key exists in user_dict
+                    else:
+                         weights[key] /= feed_back  # Multiply the weight if the key exists in user_dict
+                    #print(f"\n key {key}, old weight {old_weight}, new weights = {weights[key]}, feedback={feed_back}")        
+        
+        return weights
+    
     def get_n_best(self, n=10, redundancy_removal=False, stemming=False):
         """Returns the n-best candidates given the weights.
 
@@ -167,7 +197,18 @@ class LoadFile(object):
                 (lowercased, first occurring form of candidate), default to
                 False.
         """
+        #if not self.user_feedback_dict:
+        # print(f"\n Base:: len(self.weights) = {len(self.weights)}, self.weights = ", self.weights)        
+        
+        # if self.user_feedback_dict:
+        #     for key, value in self.user_feedback_dict.items():
+        #         if key in self.weights:
+        #             old_weight = self.weights[key]
+        #             self.weights[key] *= value  # Multiply the weight if the key exists in feedback
+        #             print(f"\n key {key}, old weight {old_weight}, new weights = {self.weights[key]} ")        
 
+        #print(f"\n Base (after feedback):: len(self.weights) = {len(self.weights)}, self.weights = ", self.weights)        
+        self.weights = self.update_weights_with_stemming(self.user_feedback_dict,  self.weights)
         # sort candidates by descending weight
         best = sorted(self.weights, key=self.weights.get, reverse=True)
 

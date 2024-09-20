@@ -419,6 +419,9 @@ class YAKE(LoadFile):
                     levenshtein distance, defaults to 0.8.
         """
 
+        self.weights = self.update_weights_with_stemming(self.user_feedback_dict,  self.weights, bigger_is_good=False)
+
+
         # sort candidates by ascending weight
         best = sorted(self.weights, key=self.weights.get, reverse=False)
 
